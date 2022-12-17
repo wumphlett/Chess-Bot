@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "chessbot"
+version = "0.1.0"
+description = ""
+authors = ["Will Humphlett <will@humphlett.net>"]
+readme = "README.md"
+packages = [{include = "chess_bot"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+jupyter = "^1.0.0"
+python-chess = "^1.999"
+requests = "^2.28.1"
+tqdm = "^4.64.1"
+pyunpack = "^0.3"
+patool = "^1.12"
+pandas = "^1.5.2"
+
+
+[tool.poetry.group.dev.dependencies]
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

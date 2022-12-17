@@ -1,0 +1,18 @@
+Implementations:
+https://github.com/dangeng/DeepChess <- best
+https://github.com/oripress/DeepChess
+https://github.com/anirudhganwal06/deep-chess-net
+https://github.com/shafitek/DeepChess-AI <- promising differences and commentary
+https://github.com/vajjhala/deepchess <- model deployment info
+https://github.com/owenps/RhinoChess <- use of colab
+
+Terms:
+Bitboard
+Alphabeta v. minimax
+Endgame Database
+Colab
+Lc0
+UCI - Universal Chess Interface
+
+Unrelated:
+https://towardsdatascience.com/train-your-own-chess-ai-66b9ca8d71e4
