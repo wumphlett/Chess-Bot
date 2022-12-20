@@ -14,15 +14,18 @@ import requests
 from tqdm.notebook import tqdm_notebook as tqdm
 
 
+sys.setrecursionlimit(10_000)
+
+
 DATA_DIR = Path("./data").resolve()
 DATASET_URL = "http://ccrl.chessdom.com/ccrl/4040/CCRL-4040.[1505357].pgn.7z"
 DATASET_FILE_COMPRESSED = DATA_DIR / DATASET_URL.rsplit("/")[-1]
 DATASET_FILE = DATA_DIR / DATASET_FILE_COMPRESSED.stem
 
-WIN_DATASET = DATA_DIR / "win.parquet"
-WIN_VAL_DATASET = DATA_DIR / "win_val.parquet"
-LOSS_DATASET = DATA_DIR / "loss.parquet"
-LOSS_VAL_DATASET = DATA_DIR / "loss_val.parquet"
+WIN_DATASET = DATA_DIR / "win.pkl"
+WIN_VAL_DATASET = DATA_DIR / "win_val.pkl"
+LOSS_DATASET = DATA_DIR / "loss.pkl"
+LOSS_VAL_DATASET = DATA_DIR / "loss_val.pkl"
 
 
 def create():
@@ -127,8 +130,11 @@ def preprocess_dataset():
     win = pd.concat((win, pd.DataFrame(win_buffer)))
     loss = pd.concat((loss, pd.DataFrame(loss_buffer)))
 
-    win.to_parquet(WIN_DATASET, engine="fastparquet")
-    loss.to_parquet(LOSS_DATASET, engine="fastparquet")
+    win = win.reset_index(drop=True)
+    loss = loss.reset_index(drop=True)
+
+    win.to_pickle(WIN_DATASET)
+    loss.to_pickle(LOSS_DATASET)
 
 
 def split_dataset():
@@ -136,20 +142,12 @@ def split_dataset():
         print(f"Dataset val parquet files found at {DATA_DIR}")
         return
 
-    # TODO https://stackoverflow.com/questions/14661701/how-to-drop-a-list-of-rows-from-pandas-dataframe
     for DATA, VAL in tqdm(((WIN_DATASET, WIN_VAL_DATASET), (LOSS_DATASET, LOSS_VAL_DATASET)), desc="Sampling"):
         data = pd.read_parquet(DATA, engine="fastparquet")
-        print(data.head())
         val = data.sample(100_000)
-        print(val.head())
         data = data.drop(index=val.index)
-        print(data.head())
         data = data.reset_index(drop=True)
-        print(data.head())
         val = val.reset_index(drop=True)
-        print(val.head())
 
-        data.to_parquet(DATA, engine="fastparquet")
-        print("data written")
-        val.to_parquet(VAL, engine="fastparquet")
-        print("val written")
+        data.to_pickle(DATA)
+        val.to_pickle(VAL)
