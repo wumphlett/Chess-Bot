@@ -1,1 +1,8 @@
+# project
+**/*.pyc
 /data/dataset.pkl
+/.ipynb_checkpoints
+/data
+
+# personal
+/.idea

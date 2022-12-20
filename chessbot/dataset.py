@@ -3,6 +3,7 @@ from pathlib import Path
 import random
 import re
 import sys
+from typing import Optional
 
 import chess
 import chess.pgn
@@ -13,16 +14,15 @@ import requests
 from tqdm.notebook import tqdm_notebook as tqdm
 
 
-sys.setrecursionlimit(10_000)
-
-
 DATA_DIR = Path("./data").resolve()
-DATASET_URL = "http://ccrl.chessdom.com/ccrl/4040/CCRL-4040.[1501488].pgn.7z"
+DATASET_URL = "http://ccrl.chessdom.com/ccrl/4040/CCRL-4040.[1505357].pgn.7z"
 DATASET_FILE_COMPRESSED = DATA_DIR / DATASET_URL.rsplit("/")[-1]
 DATASET_FILE = DATA_DIR / DATASET_FILE_COMPRESSED.stem
 
-WIN_DATASET = DATA_DIR / "win.pkl"
-LOSS_DATASET = DATA_DIR / "loss.pkl"
+WIN_DATASET = DATA_DIR / "win.parquet"
+WIN_VAL_DATASET = DATA_DIR / "win_val.parquet"
+LOSS_DATASET = DATA_DIR / "loss.parquet"
+LOSS_VAL_DATASET = DATA_DIR / "loss_val.parquet"
 
 
 def create():
@@ -30,6 +30,7 @@ def create():
     download_dataset()
     unpack_dataset()
     preprocess_dataset()
+    split_dataset()
     print("Done")
 
 
@@ -49,7 +50,6 @@ def download_dataset():
             r.iter_content(chunk_size=(CHUNK_SIZE := 4096)),
             total=content_length // CHUNK_SIZE + 1,
             desc="Downloading",
-            leave=False,
         ):
             f.write(chunk)
 
@@ -58,12 +58,12 @@ def unpack_dataset():
     if DATASET_FILE.exists():
         print(f"Dataset file found at {DATASET_FILE}")
         return
-    with tqdm(total=1, desc="Unpacking", leave=False) as pbar:
+    with tqdm(total=1, desc="Unpacking") as pbar:
         Archive(DATASET_FILE_COMPRESSED).extractall(DATA_DIR)
         pbar.update(1)
 
 
-def to_positions(game: chess.pgn.Game):
+def to_positions(game: Optional[chess.pgn.Game] = None):
     if game is None:
         return None, None
     board, positions = game.board(), []
@@ -84,11 +84,9 @@ def to_bitboard(board: chess.Board):
     for color in (chess.WHITE, chess.BLACK):
         for piece in (chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING):
             bitboard.extend(board.pieces(piece, color).tolist())
-
-    bitboard.append(board.turn)
-
     for color in (chess.WHITE, chess.BLACK):
         bitboard.extend((board.has_kingside_castling_rights(color), board.has_queenside_castling_rights(color)))
+    bitboard.append(board.turn)
 
     return np.asarray(bitboard)
 
@@ -98,13 +96,13 @@ def dataset_games():
         while game := chess.pgn.read_game(f):
             if game.headers["Result"] in ("1-0", "0-1"):
                 yield game
-            else:
+            else: # yield draws to keep the game count accurate
                 yield None
 
 
 def preprocess_dataset():
-    if WIN_DATASET.exists() or LOSS_DATASET.exists():
-        print(f"Dataset pkl files found at {DATA_DIR}")
+    if WIN_DATASET.exists() and LOSS_DATASET.exists():
+        print(f"Dataset parquet files found at {DATA_DIR}")
         return
 
     count = int(re.search("\[([0-9]*)]", DATASET_FILE.name).group(1))
@@ -112,9 +110,7 @@ def preprocess_dataset():
     win_buffer, loss_buffer = [], []
 
     with mp.Pool(32) as p:
-        for positions, is_win in tqdm(
-            p.imap_unordered(to_positions, dataset_games()), total=count, desc="Processing", leave=False
-        ):
+        for positions, is_win in tqdm(p.imap_unordered(to_positions, dataset_games()), total=count, desc="Processing"):
             if not positions:
                 continue
             if is_win:
@@ -131,5 +127,29 @@ def preprocess_dataset():
     win = pd.concat((win, pd.DataFrame(win_buffer)))
     loss = pd.concat((loss, pd.DataFrame(loss_buffer)))
 
-    win.to_pickle(WIN_DATASET)
-    loss.to_pickle(LOSS_DATASET)
+    win.to_parquet(WIN_DATASET, engine="fastparquet")
+    loss.to_parquet(LOSS_DATASET, engine="fastparquet")
+
+
+def split_dataset():
+    if WIN_VAL_DATASET.exists() and LOSS_VAL_DATASET.exists():
+        print(f"Dataset val parquet files found at {DATA_DIR}")
+        return
+
+    # TODO https://stackoverflow.com/questions/14661701/how-to-drop-a-list-of-rows-from-pandas-dataframe
+    for DATA, VAL in tqdm(((WIN_DATASET, WIN_VAL_DATASET), (LOSS_DATASET, LOSS_VAL_DATASET)), desc="Sampling"):
+        data = pd.read_parquet(DATA, engine="fastparquet")
+        print(data.head())
+        val = data.sample(100_000)
+        print(val.head())
+        data = data.drop(index=val.index)
+        print(data.head())
+        data = data.reset_index(drop=True)
+        print(data.head())
+        val = val.reset_index(drop=True)
+        print(val.head())
+
+        data.to_parquet(DATA, engine="fastparquet")
+        print("data written")
+        val.to_parquet(VAL, engine="fastparquet")
+        print("val written")
