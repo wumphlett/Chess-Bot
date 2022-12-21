@@ -143,7 +143,7 @@ def split_dataset():
         return
 
     for DATA, VAL in tqdm(((WIN_DATASET, WIN_VAL_DATASET), (LOSS_DATASET, LOSS_VAL_DATASET)), desc="Sampling"):
-        data = pd.read_parquet(DATA, engine="fastparquet")
+        data = pd.read_pickle(DATA)
         val = data.sample(100_000)
         data = data.drop(index=val.index)
         data = data.reset_index(drop=True)
