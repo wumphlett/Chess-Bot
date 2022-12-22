@@ -9,9 +9,9 @@ from tensorflow.keras.optimizers import SGD
 
 
 MODEL_DIR = Path("./models").resolve()
-POS2VEC_WEIGHTS = MODEL_DIR / "pos2vec.h5"
+POS2VEC_WEIGHTS = MODEL_DIR / "pos2vec_temp.h5"
 
-POS2VEC_LAYERS = [773, 600, 400, 200, 100]
+POS2VEC_LAYERS = [600, 400, 200, 100]
 
 
 class Pos2Vec(Model):
@@ -27,11 +27,13 @@ class Pos2Vec(Model):
             ]
         )
 
+        self.build((None, 773))
+
         if POS2VEC_WEIGHTS.exists():
             self.encode.load_weights(POS2VEC_WEIGHTS)
 
     def call(self, x):
-        return self.encode(x).numpy()
+        return self.encode(x)
 
 # TODO 773 Dense additional layer?
 # TODO that binary cross entropy loss that is asymmetric that might actually be good to predict 1's
@@ -78,7 +80,7 @@ def train_pos2vec(x_train, x_val):
             layers = ae.decode.layers
             ae.decode = Sequential([Dense(POS2VEC_LAYERS[i-1], activation="relu")] + layers)
 
-        ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy(), metrics=["accuracy"])
+        ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy())
         ae.fit(x_train, epochs=1, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], validation_data=x_val)
     ae.encode.save_weights(POS2VEC_WEIGHTS)
 
