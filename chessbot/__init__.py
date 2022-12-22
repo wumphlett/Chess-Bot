@@ -1,3 +1,3 @@
-from . import dataset
+from . import dataset, environment, model
 
-__all__ = ("dataset",)
+__all__ = ("dataset", "environment", "model")
