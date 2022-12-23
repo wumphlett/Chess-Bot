@@ -1,8 +1,10 @@
-# project
+# python
 **/*.pyc
-/data/dataset.pkl
 /.ipynb_checkpoints
+
+# project
 /data
 
 # personal
 /.idea
+/venv

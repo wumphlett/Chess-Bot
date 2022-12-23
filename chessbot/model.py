@@ -7,7 +7,6 @@ from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import SGD
 
-
 MODEL_DIR = Path("./models").resolve()
 POS2VEC_WEIGHTS = MODEL_DIR / "pos2vec_temp.h5"
 
@@ -27,17 +26,14 @@ class Pos2Vec(Model):
             ]
         )
 
-        self.build((None, 773))
-
         if POS2VEC_WEIGHTS.exists():
+            self.build((None, 773))
             self.encode.load_weights(POS2VEC_WEIGHTS)
 
     def call(self, x):
         return self.encode(x)
 
-# TODO 773 Dense additional layer?
-# TODO that binary cross entropy loss that is asymmetric that might actually be good to predict 1's
-# TODO add other metrics like accuracy ig?
+
 class AutoEncoder(Model):
     def __init__(self):
         super().__init__()

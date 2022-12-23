@@ -1,0 +1,12 @@
+https://towardsdatascience.com/how-to-finally-install-tensorflow-gpu-on-wsl2-7be59e278f92
+
+For me, the default cuda was 12.0, I needed 11.2, To help others with same problem,
+Use instead
+$ sudo apt-get --yes install cuda-toolkit-11-2
+And installing libcudnn8 and libcudnn8 -dev failed, it cant the package, so install manually
+$ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcudnn8-dev_8.1.1.33-1+cuda11.2_amd64.deb
+$ wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2004/x86_64/libcudnn8_8.1.1.33-1+cuda11.2_amd64.deb
+$ sudo apt intall libcudnn8-dev_8.1.1.33-1+cuda11.2_amd64.deb
+$ sudo apt install ~/libcudnn8-dev_8.1.1.33-1+cuda11.2_amd64.deb
+other versions can be found in
+https://ubuntu.pkgs.org/20.04/cuda-amd64/

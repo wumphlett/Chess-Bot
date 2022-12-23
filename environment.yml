@@ -1,0 +1,15 @@
+name: chess
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - jupyter
+  - anaconda
+  - pip
+  - pip:
+    - tensorflow
+    - pyunpack
+    - patool
+    - python-chess
+variables:
+  TF_CPP_MIN_LOG_LEVEL: 2
