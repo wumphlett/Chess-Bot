@@ -1,16 +1,19 @@
 from pathlib import Path
 
 import tensorflow as tf
-from tensorflow.keras.callbacks import Callback, LearningRateScheduler
-from tensorflow.keras.layers import Dense, Input
+from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.layers import Dense
 from tensorflow.keras.losses import BinaryCrossentropy
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import Adam
 
 MODEL_DIR = Path("./models").resolve()
-POS2VEC_WEIGHTS = MODEL_DIR / "pos2vec_temp.h5"
+POS2VEC_WEIGHTS = MODEL_DIR / "pos2vec.h5"
 
 POS2VEC_LAYERS = [600, 400, 200, 100]
+
+
+# TODO mixed policy?
 
 
 class Pos2Vec(Model):
@@ -30,7 +33,7 @@ class Pos2Vec(Model):
             self.build((None, 773))
             self.encode.load_weights(POS2VEC_WEIGHTS)
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         return self.encode(x)
 
 
@@ -48,7 +51,7 @@ class AutoEncoder(Model):
             ]
         )
 
-    def call(self, x):
+    def call(self, x, **kwargs):
         return self.decode(self.encode(x))
 
     @staticmethod
@@ -58,7 +61,7 @@ class AutoEncoder(Model):
         return lr * 0.98
 
 
-def train_pos2vec(x_train, x_val):
+def train_pos2vec(x_train):
     tf.keras.backend.clear_session()
 
     ae = AutoEncoder()
@@ -76,8 +79,8 @@ def train_pos2vec(x_train, x_val):
             layers = ae.decode.layers
             ae.decode = Sequential([Dense(POS2VEC_LAYERS[i-1], activation="relu")] + layers)
 
-        ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy())
-        ae.fit(x_train, epochs=1, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], validation_data=x_val)
+        ae.compile(optimizer=Adam(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
+        ae.fit(x_train, epochs=200, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)])
     ae.encode.save_weights(POS2VEC_WEIGHTS)
 
     return Pos2Vec()

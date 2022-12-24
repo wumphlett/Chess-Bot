@@ -10,3 +10,6 @@ $ sudo apt intall libcudnn8-dev_8.1.1.33-1+cuda11.2_amd64.deb
 $ sudo apt install ~/libcudnn8-dev_8.1.1.33-1+cuda11.2_amd64.deb
 other versions can be found in
 https://ubuntu.pkgs.org/20.04/cuda-amd64/
+
+autocomplete
+https://github.com/tensorflow/tensorflow/issues/56231
