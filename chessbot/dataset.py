@@ -29,4 +29,9 @@ def pos2vec_dataset():
 
     x_train = np.vstack(pd.concat((win.sample(1_000_000), loss.sample(1_000_000)))["bitboard"].to_numpy())
 
-    return Pos2VecDataset(x_train, 50)
+    win_val = pd.read_pickle(WIN_VAL_DATASET)
+    loss_val = pd.read_pickle(LOSS_VAL_DATASET)
+
+    x_val = np.vstack(pd.concat((win_val, loss_val))["bitboard"].to_numpy())
+
+    return Pos2VecDataset(x_train, 50), Pos2VecDataset(x_val, 500)
