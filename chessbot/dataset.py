@@ -34,4 +34,4 @@ def pos2vec_dataset():
 
     x_val = np.vstack(pd.concat((win_val, loss_val))["bitboard"].to_numpy())
 
-    return Pos2VecDataset(x_train, 50), Pos2VecDataset(x_val, 500)
+    return Pos2VecDataset(x_train, 50), Pos2VecDataset(x_val, 50)

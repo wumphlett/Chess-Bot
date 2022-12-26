@@ -18,11 +18,11 @@ class Pos2Vec(Model):
         super().__init__()
         self.encode = Sequential(
             [
-                Dense(773, activation="relu"),
-                Dense(600, activation="relu"),
-                Dense(400, activation="relu"),
-                Dense(200, activation="relu"),
-                Dense(100, activation="relu"),
+                Dense(773, activation=LeakyReLU()),
+                Dense(600, activation=LeakyReLU()),
+                Dense(400, activation=LeakyReLU()),
+                Dense(200, activation=LeakyReLU()),
+                Dense(100, activation=LeakyReLU()),
             ]
         )
 
@@ -39,7 +39,7 @@ class AutoEncoder(Model):
         super().__init__()
         self.encode = Sequential(
             [
-                Dense(773, activation="relu", name="encode_1"),
+                Dense(773, activation=LeakyReLU(), name="encode_1"),
             ]
         )
         self.decode = Sequential(
@@ -66,12 +66,12 @@ def train_pos2vec(x_train, x_val):
     for i, size in enumerate(POS2VEC_LAYERS):
         print(f"Training layer {i+1}/{len(POS2VEC_LAYERS)}")
 
-        ae.encode.add(Dense(size, activation="relu", name=f"encode_{i+2}"))
+        ae.encode.add(Dense(size, activation=LeakyReLU(), name=f"encode_{i+2}"))
         if i != 0:
             layers = ae.decode.layers
-            ae.decode = Sequential([Dense(POS2VEC_LAYERS[i-1], activation="relu", name=f"decode_{4-i}")] + layers)
+            ae.decode = Sequential([Dense(POS2VEC_LAYERS[i-1], activation=LeakyReLU(), name=f"decode_{4-i}")] + layers)
 
-        ae.compile(optimizer=Adam(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
+        ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
         ae.fit(x_train, epochs=200, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=x_val)
 
         for j, layer in enumerate(ae.encode.layers):
