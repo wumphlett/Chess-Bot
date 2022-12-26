@@ -58,7 +58,7 @@ class AutoEncoder(Model):
         return lr * 0.98
 
 
-def train_pos2vec(x_train, x_val):
+def train_pos2vec(train, val):
     tf.keras.backend.clear_session()
 
     ae = AutoEncoder()
@@ -72,7 +72,7 @@ def train_pos2vec(x_train, x_val):
             ae.decoder = Sequential([Dense(POS2VEC_LAYERS[i-1], activation="relu", name=f"decoder_{4-i}")] + layers)
 
         ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
-        ae.fit(x_train, epochs=200, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=x_val)
+        ae.fit(train, epochs=200, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val)
 
         ae.encoder.summary()
         ae.decoder.summary()
