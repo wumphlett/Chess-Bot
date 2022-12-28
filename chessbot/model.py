@@ -2,10 +2,10 @@ from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import LearningRateScheduler
-from tensorflow.keras.layers import Concatenate, Dense, Input, LeakyReLU
+from tensorflow.keras.layers import Concatenate, Dense, Input
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers import SGD
 
 MODEL_DIR = Path("./models").resolve()
 DEEPCHESS_WEIGHTS = MODEL_DIR / "deepchess.h5"
@@ -57,7 +57,6 @@ class Pos2Vec(Model):
 
         if load_weights:
             print(f"Pos2Vec weights loading from {POS2VEC_WEIGHTS}")
-            # TODO test self.load_weights(POS2VEC_WEIGHTS)
             self.encoder.load_weights(POS2VEC_WEIGHTS)
 
     def call(self, inputs, **kwargs):
@@ -103,11 +102,20 @@ def train_deepchess(train, val=None):
     dc = DeepChess()
 
     dc.compile(optimizer=SGD(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True)
-    dc.fit(train, epochs=1, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val)
+    dc.fit(train, epochs=1_000, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val)
 
     dc.deepchess.save_weights(DEEPCHESS_WEIGHTS)
 
-    return dc
+    return get_deepchess()
+
+
+def get_pos2vec():
+    tf.keras.backend.clear_session()
+
+    p2v = Pos2Vec(load_weights=True)
+    p2v.compile(optimizer=SGD(), loss=BinaryCrossentropy(), jit_compile=True)
+
+    return p2v
 
 
 def train_pos2vec(train, val=None):
@@ -124,7 +132,7 @@ def train_pos2vec(train, val=None):
             ae.decoder = Sequential([Dense(POS2VEC_LAYERS[i-1], activation="relu", name=f"decoder_{4-i}")] + layers)
 
         ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
-        ae.fit(train, epochs=1, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val)
+        ae.fit(train, epochs=200, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val)
 
         for j, layer in enumerate(ae.encoder.layers):
             layer.trainable = False
@@ -132,4 +140,4 @@ def train_pos2vec(train, val=None):
             layer.trainable = False
     ae.encoder.save_weights(POS2VEC_WEIGHTS)
 
-    return Pos2Vec(load_weights=True)
+    return get_pos2vec()
