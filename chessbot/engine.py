@@ -23,6 +23,7 @@ class Engine:
 
     def calculate_move(self):
         with chess.polyglot.open_reader(HUMAN_OPENING) as opening_book:
+            # TODO test opening time
             if (entry := opening_book.get(self.board)) is None:
                 move = self.alphabeta(
                     self.board, DEPTH, -math.inf, math.inf, self.play_white
@@ -64,10 +65,10 @@ class Engine:
 
             return value
 
-    def compare(self, l_board: chess.Board, r_board: chess.Board):
-        left_bitboard, right_bitboard = np.reshape(to_bitboard(l_board), (1, 773)), np.reshape(to_bitboard(r_board), (1, 773))
+    def compare(self, left: chess.Board, right: chess.Board):
+        left_bitboard, right_bitboard = np.reshape(to_bitboard(left), (1, 773)), np.reshape(to_bitboard(right), (1, 773))
         return (
-            (l_board, r_board)
+            (left, right)
             if np.argmax(self.deepchess.predict([left_bitboard, right_bitboard], verbose=False)[0]) == 0
-            else (r_board, l_board)
+            else (right, left)
         )
