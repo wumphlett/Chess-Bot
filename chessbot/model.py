@@ -20,8 +20,8 @@ class DeepChess(Model):
 
         pos2vec = Pos2Vec(load_weights=not load_weights)
         left_input, right_input = Input(shape=(773,), name="dc_input_left"), Input(shape=(773,), name="dc_input_right")
-        head = Concatenate()([pos2vec(left_input), pos2vec(right_input)])
-        dc_1 = Dense(400, activation="relu", name="dc_1")(head)
+        join = Concatenate(axis=1)([pos2vec(left_input), pos2vec(right_input)])
+        dc_1 = Dense(400, activation="relu", name="dc_1")(join)
         dc_2 = Dense(200, activation="relu", name="dc_2")(dc_1)
         dc_3 = Dense(100, activation="relu", name="dc_3")(dc_2)
         dc_4 = Dense(2, activation="softmax", name="dc_4")(dc_3)
@@ -48,11 +48,13 @@ class Pos2Vec(Model):
         self.encoder = Sequential(
             [
                 Input(shape=(773,), name="p2v_input"),
-                Dense(600, activation="relu", name="p2v_1"),
-                Dense(400, activation="relu", name="p2v_2"),
-                Dense(200, activation="relu", name="p2v_3"),
-                Dense(100, activation="relu", name="p2v_4"),
-            ], name="pos2vec"
+                Dense(773, activation="relu", name="p2v_1"),
+                Dense(600, activation="relu", name="p2v_2"),
+                Dense(400, activation="relu", name="p2v_3"),
+                Dense(200, activation="relu", name="p2v_4"),
+                Dense(100, activation="relu", name="p2v_5"),
+            ],
+            name="pos2vec",
         )
 
         if load_weights:
@@ -69,15 +71,19 @@ class AutoEncoder(Model):
         self.encoder = Sequential(
             [
                 Input(shape=(773,)),
-            ], name="ae_encoder"
+                Dense(773, activation="relu", name="encoder_1"),
+            ],
+            name="ae_encoder",
         )
         self.decoder = Sequential(
             [
                 Dense(773, activation="sigmoid", name="decoder_4"),
-            ], name="ae_decoder"
+            ],
+            name="ae_decoder",
         )
 
     def call(self, inputs, **kwargs):
+        # TODO cache result of predict
         return self.decoder(self.encoder(inputs))
 
     @staticmethod
@@ -101,8 +107,12 @@ def train_deepchess(train, val=None):
 
     dc = DeepChess()
 
-    dc.compile(optimizer=SGD(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True)
-    dc.fit(train, epochs=1_000, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val)
+    dc.compile(
+        optimizer=SGD(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True
+    )
+    dc.fit(
+        train, epochs=1, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val
+    )
 
     dc.deepchess.save_weights(DEEPCHESS_WEIGHTS)
 
@@ -126,15 +136,21 @@ def train_pos2vec(train, val=None):
     for i, size in enumerate(POS2VEC_LAYERS):
         print(f"Training layer {i+1}/{len(POS2VEC_LAYERS)}")
 
-        ae.encoder.add(Dense(size, activation="relu", name=f"encoder_{i+1}"))
+        ae.encoder.add(Dense(size, activation="relu", name=f"encoder_{i+2}"))
         if i != 0:
             layers = ae.decoder.layers
-            ae.decoder = Sequential([Dense(POS2VEC_LAYERS[i-1], activation="relu", name=f"decoder_{4-i}")] + layers)
+            ae.decoder = Sequential(
+                [Dense(POS2VEC_LAYERS[i - 1], activation="relu", name=f"decoder_{4-i}")] + layers, name="ae_decoder"
+            )
 
         ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
-        ae.fit(train, epochs=200, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val)
+        ae.fit(
+            train, epochs=50, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val
+        )
 
         for j, layer in enumerate(ae.encoder.layers):
+            if j == len(ae.encoder.layers) - 1:
+                break
             layer.trainable = False
         for j, layer in enumerate(ae.decoder.layers):
             layer.trainable = False

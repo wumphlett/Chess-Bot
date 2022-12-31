@@ -23,9 +23,9 @@ class DeepChessDataset(Sequence):
         return math.ceil(len(self.x_left) / self.batch_size)
 
     def __getitem__(self, idx):
-        x_left_batch = self.x_left[idx * self.batch_size:(idx + 1) * self.batch_size]
-        x_right_batch = self.x_right[idx * self.batch_size:(idx + 1) * self.batch_size]
-        y_batch = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+        x_left_batch = self.x_left[idx * self.batch_size : (idx + 1) * self.batch_size]
+        x_right_batch = self.x_right[idx * self.batch_size : (idx + 1) * self.batch_size]
+        y_batch = self.y[idx * self.batch_size : (idx + 1) * self.batch_size]
         return [x_left_batch, x_right_batch], y_batch
 
     def on_epoch_end(self):
@@ -49,7 +49,7 @@ class Pos2VecDataset(Sequence):
         return math.ceil(len(self.x) / self.batch_size)
 
     def __getitem__(self, idx):
-        x_batch = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        x_batch = self.x[idx * self.batch_size : (idx + 1) * self.batch_size]
         return x_batch, x_batch
 
     def on_epoch_end(self):

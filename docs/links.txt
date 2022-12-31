@@ -9,6 +9,9 @@ https://github.com/owenps/RhinoChess <- use of colab
 Models:
 https://www.tensorflow.org/tutorials/generative/autoencoder
 
+Books:
+https://chess.stackexchange.com/questions/35448/looking-for-polyglot-opening-books
+
 Terms:
 Bitboard
 Alphabeta v. minimax

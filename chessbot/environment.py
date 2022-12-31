@@ -99,7 +99,7 @@ def dataset_games():
         while game := chess.pgn.read_game(f):
             if game.headers["Result"] in ("1-0", "0-1"):
                 yield game
-            else: # yield draws to keep the game count accurate
+            else:  # yield draws to keep the game count accurate
                 yield None
 
 
