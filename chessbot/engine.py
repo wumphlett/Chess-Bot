@@ -2,13 +2,14 @@ import math
 from pathlib import Path
 
 import chess
+import chess.polyglot
 import numpy as np
 
 from .environment import to_bitboard
 from .model import get_deepchess
 
 
-DEPTH = 4
+DEPTH = 3
 BOOK_DIR = Path("./books").resolve()
 HUMAN_OPENING = BOOK_DIR / "human.bin"
 TITAN_OPENING = BOOK_DIR / "titan.bin"
@@ -21,9 +22,13 @@ class Engine:
         self.deepchess = get_deepchess()
 
     def calculate_move(self):
-        move = self.alphabeta(
-            self.board, DEPTH, -math.inf, math.inf, self.play_white
-        ).move_stack[len(self.board.move_stack)]
+        with chess.polyglot.open_reader(HUMAN_OPENING) as opening_book:
+            if (entry := opening_book.get(self.board)) is None:
+                move = self.alphabeta(
+                    self.board, DEPTH, -math.inf, math.inf, self.play_white
+                ).move_stack[len(self.board.move_stack)]
+            else:
+                move = entry.move
         return move
 
     def alphabeta(self, node: chess.Board, depth: int, α_pos, β_pos, maximizing: bool):
@@ -40,7 +45,7 @@ class Engine:
                 α_pos = value if α_pos == -math.inf else self.compare(α_pos, value)[0]
 
                 if β_pos != math.inf:
-                    if self.compare(value, β_pos)[0] == candidate:
+                    if self.compare(value, β_pos)[0] == value:
                         break
             return value
         else:
@@ -63,6 +68,6 @@ class Engine:
         left_bitboard, right_bitboard = np.reshape(to_bitboard(l_board), (1, 773)), np.reshape(to_bitboard(r_board), (1, 773))
         return (
             (l_board, r_board)
-            if np.argmax(self.deepchess([left_bitboard, right_bitboard])) == 0
+            if np.argmax(self.deepchess.predict([left_bitboard, right_bitboard], verbose=False)[0]) == 0
             else (r_board, l_board)
         )
