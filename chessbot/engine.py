@@ -23,13 +23,14 @@ class Engine:
 
     def calculate_move(self):
         with chess.polyglot.open_reader(HUMAN_OPENING) as opening_book:
-            # TODO test opening time
-            if (entry := opening_book.get(self.board)) is None:
+            if entry := opening_book.get(self.board):  # opening book
+                move = entry.move
+            elif len(legal_moves := list(self.board.legal_moves)) == 1:  # one possible move
+                move = legal_moves[0]
+            else:  # calculate move
                 move = self.alphabeta(
                     self.board, DEPTH, -math.inf, math.inf, self.play_white
                 ).move_stack[len(self.board.move_stack)]
-            else:
-                move = entry.move
         return move
 
     def alphabeta(self, node: chess.Board, depth: int, α_pos, β_pos, maximizing: bool):

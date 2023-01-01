@@ -2,10 +2,10 @@ from pathlib import Path
 
 import tensorflow as tf
 from tensorflow.keras.callbacks import LearningRateScheduler
-from tensorflow.keras.layers import Concatenate, Dense, Input
-from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy
+from tensorflow.keras.layers import Concatenate, Dense, Input, LeakyReLU
+from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy, MeanSquaredError
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.optimizers import SGD
+from tensorflow.keras.optimizers import Adam, SGD
 
 MODEL_DIR = Path("./models").resolve()
 DEEPCHESS_WEIGHTS = MODEL_DIR / "deepchess.h5"
@@ -97,7 +97,7 @@ def get_deepchess():
     tf.keras.backend.clear_session()
 
     dc = DeepChess(load_weights=True)
-    dc.compile(optimizer=SGD(), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True)
+    dc.compile(optimizer=Adam(), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True)
 
     return dc
 
@@ -108,10 +108,10 @@ def train_deepchess(train, val=None):
     dc = DeepChess()
 
     dc.compile(
-        optimizer=SGD(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True
+        optimizer=Adam(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True
     )
     dc.fit(
-        train, epochs=1, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val
+        train, epochs=1_000, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val
     )
 
     dc.deepchess.save_weights(DEEPCHESS_WEIGHTS)
@@ -123,7 +123,7 @@ def get_pos2vec():
     tf.keras.backend.clear_session()
 
     p2v = Pos2Vec(load_weights=True)
-    p2v.compile(optimizer=SGD(), loss=BinaryCrossentropy(), jit_compile=True)
+    p2v.compile(optimizer=SGD(), loss=MeanSquaredError(), jit_compile=True)
 
     return p2v
 
@@ -143,9 +143,9 @@ def train_pos2vec(train, val=None):
                 [Dense(POS2VEC_LAYERS[i - 1], activation="relu", name=f"decoder_{4-i}")] + layers, name="ae_decoder"
             )
 
-        ae.compile(optimizer=SGD(learning_rate=0.005), loss=BinaryCrossentropy(), jit_compile=True)
+        ae.compile(optimizer=SGD(learning_rate=0.005), loss=MeanSquaredError(), metrics=["binary_accuracy"], jit_compile=True)
         ae.fit(
-            train, epochs=50, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val
+            train, epochs=100, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val
         )
 
         for j, layer in enumerate(ae.encoder.layers):

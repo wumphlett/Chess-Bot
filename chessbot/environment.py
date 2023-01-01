@@ -71,6 +71,7 @@ def to_positions(game: Optional[chess.pgn.Game] = None):
         return None, None
     board, positions = game.board(), []
     for i, move in enumerate(game.mainline_moves()):
+        print(board)
         # not within first 5 moves or capture move
         if i >= 10 and not board.is_capture(move):
             positions.append(board.copy())
@@ -87,9 +88,9 @@ def to_bitboard(board: chess.Board):
     for color in (chess.WHITE, chess.BLACK):
         for piece in (chess.PAWN, chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING):
             bitboard.extend(board.pieces(piece, color).tolist())
+    bitboard.append(board.turn)
     for color in (chess.WHITE, chess.BLACK):
         bitboard.extend((board.has_kingside_castling_rights(color), board.has_queenside_castling_rights(color)))
-    bitboard.append(board.turn)
 
     return np.asarray(bitboard)
 
