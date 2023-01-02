@@ -71,7 +71,6 @@ def to_positions(game: Optional[chess.pgn.Game] = None):
         return None, None
     board, positions = game.board(), []
     for i, move in enumerate(game.mainline_moves()):
-        print(board)
         # not within first 5 moves or capture move
         if i >= 10 and not board.is_capture(move):
             positions.append(board.copy())
@@ -145,7 +144,7 @@ def split_dataset():
 
     for DATA, VAL in tqdm(((WIN_DATASET, WIN_VAL_DATASET), (LOSS_DATASET, LOSS_VAL_DATASET)), desc="Sampling"):
         data = pd.read_pickle(DATA)
-        val = data.sample(100_000)
+        val = data.sample(100_000, random_state=42)
         data = data.drop(index=val.index)
         data = data.reset_index(drop=True)
         val = val.reset_index(drop=True)

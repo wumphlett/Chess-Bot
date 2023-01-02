@@ -29,8 +29,8 @@ class DeepChessDataset(Sequence):
         return [x_left_batch, x_right_batch], y_batch
 
     def on_epoch_end(self):
-        win_sample = self.win.sample(self.sample_size)["bitboard"]
-        loss_sample = self.loss.sample(self.sample_size)["bitboard"]
+        win_sample = self.win.sample(self.sample_size, random_state=42)["bitboard"]
+        loss_sample = self.loss.sample(self.sample_size, random_state=42)["bitboard"]
         for i, (x_win, x_loss) in enumerate(zip(win_sample.values, loss_sample.values)):
             label = random.choice(((1, 0), (0, 1)))
             x_left, x_right = (x_win, x_loss) if label == (1, 0) else (x_loss, x_win)
@@ -42,7 +42,11 @@ class DeepChessDataset(Sequence):
 
 class Pos2VecDataset(Sequence):
     def __init__(self, win, loss, batch_size, sample_size=1_000_000):
-        self.x = np.vstack(pd.concat((win.sample(sample_size), loss.sample(sample_size)))["bitboard"].to_numpy())
+        self.x = np.vstack(
+            pd.concat((win.sample(sample_size, random_state=42), loss.sample(sample_size, random_state=42)))[
+                "bitboard"
+            ].to_numpy()
+        )
         self.batch_size = batch_size
 
     def __len__(self):
@@ -63,7 +67,7 @@ def deepchess_dataset():
     win_val = pd.read_pickle(WIN_VAL_DATASET)
     loss_val = pd.read_pickle(LOSS_VAL_DATASET)
 
-    return DeepChessDataset(win, loss, 50), DeepChessDataset(win_val, loss_val, 1_000, 1_000)
+    return DeepChessDataset(win, loss, 16), DeepChessDataset(win_val, loss_val, 25, 1_000)
 
 
 def pos2vec_dataset():
@@ -73,4 +77,4 @@ def pos2vec_dataset():
     win_val = pd.read_pickle(WIN_VAL_DATASET)
     loss_val = pd.read_pickle(LOSS_VAL_DATASET)
 
-    return Pos2VecDataset(win, loss, 50), Pos2VecDataset(win_val, loss_val, 50, 100_000)
+    return Pos2VecDataset(win, loss, 16), Pos2VecDataset(win_val, loss_val, 16, 100_000)

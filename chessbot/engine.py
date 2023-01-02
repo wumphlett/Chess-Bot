@@ -28,9 +28,9 @@ class Engine:
             elif len(legal_moves := list(self.board.legal_moves)) == 1:  # one possible move
                 move = legal_moves[0]
             else:  # calculate move
-                move = self.alphabeta(
-                    self.board, DEPTH, -math.inf, math.inf, self.play_white
-                ).move_stack[len(self.board.move_stack)]
+                move = self.alphabeta(self.board, DEPTH, -math.inf, math.inf, self.play_white).move_stack[
+                    len(self.board.move_stack)
+                ]
         return move
 
     def alphabeta(self, node: chess.Board, depth: int, α_pos, β_pos, maximizing: bool):
@@ -55,7 +55,7 @@ class Engine:
             for move in node.legal_moves:
                 child = node.copy()
                 child.push(move)
-                
+
                 candidate = self.alphabeta(child, depth - 1, α_pos, β_pos, True)
                 value = candidate if value == math.inf else self.compare(value, candidate)[1]
                 β_pos = value if β_pos == math.inf else self.compare(β_pos, value)[1]
@@ -67,7 +67,9 @@ class Engine:
             return value
 
     def compare(self, left: chess.Board, right: chess.Board):
-        left_bitboard, right_bitboard = np.reshape(to_bitboard(left), (1, 773)), np.reshape(to_bitboard(right), (1, 773))
+        left_bitboard, right_bitboard = np.reshape(to_bitboard(left), (1, 773)), np.reshape(
+            to_bitboard(right), (1, 773)
+        )
         return (
             (left, right)
             if np.argmax(self.deepchess.predict([left_bitboard, right_bitboard], verbose=False)[0]) == 0

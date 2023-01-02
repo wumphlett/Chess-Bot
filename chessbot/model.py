@@ -21,10 +21,10 @@ class DeepChess(Model):
         pos2vec = Pos2Vec(load_weights=not load_weights)
         left_input, right_input = Input(shape=(773,), name="dc_input_left"), Input(shape=(773,), name="dc_input_right")
         join = Concatenate(axis=1)([pos2vec(left_input), pos2vec(right_input)])
-        dc_1 = Dense(400, activation="relu", name="dc_1")(join)
-        dc_2 = Dense(200, activation="relu", name="dc_2")(dc_1)
-        dc_3 = Dense(100, activation="relu", name="dc_3")(dc_2)
-        dc_4 = Dense(2, activation="softmax", name="dc_4")(dc_3)
+        dc_1 = Dense(400, activation="relu", kernel_initializer="he_uniform", name="dc_1")(join)
+        dc_2 = Dense(200, activation="relu", kernel_initializer="he_uniform", name="dc_2")(dc_1)
+        dc_3 = Dense(100, activation="relu", kernel_initializer="he_uniform", name="dc_3")(dc_2)
+        dc_4 = Dense(2, activation="softmax", kernel_initializer="he_uniform", name="dc_4")(dc_3)
 
         self.deepchess = Model(inputs=[left_input, right_input], outputs=dc_4)
 
@@ -71,13 +71,13 @@ class AutoEncoder(Model):
         self.encoder = Sequential(
             [
                 Input(shape=(773,)),
-                Dense(773, activation="relu", name="encoder_1"),
+                Dense(773, activation="relu", kernel_initializer="he_uniform", name="encoder_1"),
             ],
             name="ae_encoder",
         )
         self.decoder = Sequential(
             [
-                Dense(773, activation="sigmoid", name="decoder_4"),
+                Dense(773, activation="sigmoid", kernel_initializer="he_uniform", name="decoder_4"),
             ],
             name="ae_decoder",
         )
@@ -143,9 +143,15 @@ def train_pos2vec(train, val=None):
                 [Dense(POS2VEC_LAYERS[i - 1], activation="relu", name=f"decoder_{4-i}")] + layers, name="ae_decoder"
             )
 
-        ae.compile(optimizer=SGD(learning_rate=0.005), loss=MeanSquaredError(), metrics=["binary_accuracy"], jit_compile=True)
+        ae.compile(
+            optimizer=SGD(learning_rate=0.005), loss=MeanSquaredError(), metrics=["binary_accuracy"], jit_compile=True
+        )
         ae.fit(
-            train, epochs=100, callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)], workers=8, validation_data=val
+            train,
+            epochs=200,
+            callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)],
+            workers=8,
+            validation_data=val,
         )
 
         for j, layer in enumerate(ae.encoder.layers):

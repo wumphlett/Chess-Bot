@@ -6,6 +6,8 @@ https://github.com/shafitek/DeepChess-AI <- promising differences and commentary
 https://github.com/vajjhala/deepchess <- model deployment info
 https://github.com/owenps/RhinoChess <- use of colab
 
+https://github.com/paintception/DeepChess
+
 Models:
 https://www.tensorflow.org/tutorials/generative/autoencoder
 
