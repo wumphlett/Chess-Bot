@@ -1,17 +1,27 @@
 from pathlib import Path
 
 import tensorflow as tf
-from tensorflow.keras.callbacks import LearningRateScheduler
+from tensorflow.keras.callbacks import BackupAndRestore, CSVLogger, LearningRateScheduler
 from tensorflow.keras.layers import Concatenate, Dense, Input, LeakyReLU
 from tensorflow.keras.losses import BinaryCrossentropy, CategoricalCrossentropy, MeanSquaredError
 from tensorflow.keras.models import Model, Sequential
-from tensorflow.keras.optimizers import Adam, SGD
+from tensorflow.keras.optimizers import SGD
+from tensorflow.python.keras.optimizer_v2.adam import Adam
 
-MODEL_DIR = Path("./models").resolve()
+LOG_DIR = Path("./log")
+MODEL_DIR = Path("./models")
+CHECKPOINT_DIR = Path("./checkpoints")  # TODO rename ckpt
 DEEPCHESS_WEIGHTS = MODEL_DIR / "deepchess.h5"
 POS2VEC_WEIGHTS = MODEL_DIR / "pos2vec.h5"
 
 POS2VEC_LAYERS = [600, 400, 200, 100]
+
+LOG_DIR.mkdir(exist_ok=True)
+MODEL_DIR.mkdir(exist_ok=True)
+CHECKPOINT_DIR.mkdir(exist_ok=True)
+
+P2V_LOG = LOG_DIR / "p2v.log"
+DC_LOG = LOG_DIR / "dc.log"
 
 
 class DeepChess(Model):
@@ -93,33 +103,45 @@ class AutoEncoder(Model):
         return lr * 0.98
 
 
-def get_deepchess():
+def deepchess() -> DeepChess:
     tf.keras.backend.clear_session()
 
     dc = DeepChess(load_weights=True)
-    dc.compile(optimizer=Adam(), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True)
+    dc.compile(optimizer=SGD(), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True)
 
     return dc
 
 
-def train_deepchess(train, val=None):
+def train_deepchess(train, val=None) -> DeepChess:
     tf.keras.backend.clear_session()
+
+    if list(CHECKPOINT_DIR.iterdir()):
+        DC_LOG.unlink(missing_ok=True)
 
     dc = DeepChess()
 
     dc.compile(
-        optimizer=Adam(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True
+        optimizer=SGD(learning_rate=0.01), loss=CategoricalCrossentropy(), metrics=["accuracy"], jit_compile=True
     )
     dc.fit(
-        train, epochs=1_000, callbacks=[LearningRateScheduler(DeepChess.lr_schedule)], workers=8, validation_data=val
+        train,
+        epochs=1_000,
+        callbacks=[
+            LearningRateScheduler(DeepChess.lr_schedule),
+            BackupAndRestore(CHECKPOINT_DIR),
+            CSVLogger(DC_LOG, append=True)
+        ],
+        workers=8,
+        validation_data=val,
     )
 
     dc.deepchess.save_weights(DEEPCHESS_WEIGHTS)
 
-    return get_deepchess()
+    return deepchess()
 
 
-def get_pos2vec():
+def pos2vec() -> Pos2Vec:
+    # TODO frozen model optimization
     tf.keras.backend.clear_session()
 
     p2v = Pos2Vec(load_weights=True)
@@ -128,8 +150,11 @@ def get_pos2vec():
     return p2v
 
 
-def train_pos2vec(train, val=None):
+def train_pos2vec(train, val=None) -> Pos2Vec:
     tf.keras.backend.clear_session()
+
+    if list(CHECKPOINT_DIR.iterdir()):
+        P2V_LOG.unlink(missing_ok=True)
 
     ae = AutoEncoder()
     # autoencoder greedy layer-wise pretraining
@@ -149,17 +174,20 @@ def train_pos2vec(train, val=None):
         ae.fit(
             train,
             epochs=200,
-            callbacks=[LearningRateScheduler(AutoEncoder.lr_schedule)],
+            callbacks=[
+                LearningRateScheduler(AutoEncoder.lr_schedule),
+                BackupAndRestore(CHECKPOINT_DIR),
+                CSVLogger(P2V_LOG, append=True)
+            ],  # TODO make this layer by layer safe
             workers=8,
             validation_data=val,
         )
 
         for j, layer in enumerate(ae.encoder.layers):
-            if j == len(ae.encoder.layers) - 1:
-                break
-            layer.trainable = False
+            if j != len(ae.encoder.layers) - 1:
+                layer.trainable = False
         for j, layer in enumerate(ae.decoder.layers):
             layer.trainable = False
     ae.encoder.save_weights(POS2VEC_WEIGHTS)
 
-    return get_pos2vec()
+    return pos2vec()

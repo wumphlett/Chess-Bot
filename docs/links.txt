@@ -14,13 +14,11 @@ https://www.tensorflow.org/tutorials/generative/autoencoder
 Books:
 https://chess.stackexchange.com/questions/35448/looking-for-polyglot-opening-books
 
-Terms:
-Bitboard
-Alphabeta v. minimax
-Endgame Database
-Colab
-Lc0
-UCI - Universal Chess Interface
-
 Unrelated:
 https://towardsdatascience.com/train-your-own-chess-ai-66b9ca8d71e4
+
+Alts:
+https://www.chessprogramming.org/Deep_Learning
+
+Elo Graph:
+https://github.com/sciencepal/sciencepal

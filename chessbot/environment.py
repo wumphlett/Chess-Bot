@@ -4,7 +4,7 @@ from pathlib import Path
 import random
 import re
 import sys
-from typing import Optional
+from typing import List, Optional
 
 import chess
 import chess.pgn
@@ -15,8 +15,8 @@ import requests
 from tqdm.notebook import tqdm_notebook as tqdm
 
 
-DATA_DIR = Path("./data").resolve()
 DATASET_URL = "http://ccrl.chessdom.com/ccrl/4040/CCRL-4040.[1505357].pgn.7z"
+DATA_DIR = Path("./data")
 DATASET_FILE_COMPRESSED = DATA_DIR / DATASET_URL.rsplit("/")[-1]
 DATASET_FILE = DATA_DIR / DATASET_FILE_COMPRESSED.stem
 
@@ -25,7 +25,7 @@ WIN_VAL_DATASET = DATA_DIR / "win_val.pkl"
 LOSS_DATASET = DATA_DIR / "loss.pkl"
 LOSS_VAL_DATASET = DATA_DIR / "loss_val.pkl"
 
-sys.setrecursionlimit(10_000)
+sys.setrecursionlimit(10_000)  # prevents pickling issues when pre-processing datasets using multiprocessing
 DATA_DIR.mkdir(exist_ok=True)
 
 
@@ -66,7 +66,7 @@ def unpack_dataset():
         pbar.update(1)
 
 
-def to_positions(game: Optional[chess.pgn.Game] = None):
+def to_positions(game: Optional[chess.pgn.Game] = None) -> (List[chess.Board], bool):
     if game is None:
         return None, None
     board, positions = game.board(), []
@@ -81,7 +81,7 @@ def to_positions(game: Optional[chess.pgn.Game] = None):
     return positions, game.headers["Result"] == "1-0"
 
 
-def to_bitboard(board: chess.Board):
+def to_bitboard(board: chess.Board) -> np.ndarray:
     bitboard = []
 
     for color in (chess.WHITE, chess.BLACK):
@@ -94,7 +94,7 @@ def to_bitboard(board: chess.Board):
     return np.asarray(bitboard)
 
 
-def dataset_games():
+def dataset_games() -> Optional[chess.pgn.Game]:
     with open(DATASET_FILE) as f:
         while game := chess.pgn.read_game(f):
             if game.headers["Result"] in ("1-0", "0-1"):
@@ -144,7 +144,7 @@ def split_dataset():
 
     for DATA, VAL in tqdm(((WIN_DATASET, WIN_VAL_DATASET), (LOSS_DATASET, LOSS_VAL_DATASET)), desc="Sampling"):
         data = pd.read_pickle(DATA)
-        val = data.sample(100_000, random_state=42)
+        val = data.sample(100_000)
         data = data.drop(index=val.index)
         data = data.reset_index(drop=True)
         val = val.reset_index(drop=True)

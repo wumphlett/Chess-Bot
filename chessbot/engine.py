@@ -6,20 +6,22 @@ import chess.polyglot
 import numpy as np
 
 from .environment import to_bitboard
-from .model import get_deepchess
+from .model import deepchess
 
 
 DEPTH = 3
-BOOK_DIR = Path("./books").resolve()
+BOOK_DIR = Path("./books")
 HUMAN_OPENING = BOOK_DIR / "human.bin"
 TITAN_OPENING = BOOK_DIR / "titan.bin"
+
+BOOK_DIR.mkdir(exist_ok=True)
 
 
 class Engine:
     def __init__(self, play_white: bool):
         self.play_white = play_white
         self.board = chess.Board()
-        self.deepchess = get_deepchess()
+        self.deepchess = deepchess()
 
     def calculate_move(self):
         with chess.polyglot.open_reader(HUMAN_OPENING) as opening_book:
@@ -70,6 +72,7 @@ class Engine:
         left_bitboard, right_bitboard = np.reshape(to_bitboard(left), (1, 773)), np.reshape(
             to_bitboard(right), (1, 773)
         )
+        # TODO determine fastest way to do predict
         return (
             (left, right)
             if np.argmax(self.deepchess.predict([left_bitboard, right_bitboard], verbose=False)[0]) == 0

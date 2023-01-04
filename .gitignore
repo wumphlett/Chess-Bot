@@ -4,6 +4,9 @@
 
 # project
 /data
+/checkpoints
+/ckpt
+/log
 
 # personal
 /.idea

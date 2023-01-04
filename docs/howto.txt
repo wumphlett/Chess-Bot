@@ -1,5 +1,6 @@
 https://towardsdatascience.com/how-to-finally-install-tensorflow-gpu-on-wsl2-7be59e278f92
 
+# TODO fix the typos from copied comment and formalize into script
 For me, the default cuda was 12.0, I needed 11.2, To help others with same problem,
 Use instead
 $ sudo apt-get --yes install cuda-toolkit-11-2

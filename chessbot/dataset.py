@@ -9,7 +9,8 @@ from chessbot.environment import LOSS_DATASET, LOSS_VAL_DATASET, WIN_DATASET, WI
 
 
 class DeepChessDataset(Sequence):
-    def __init__(self, win, loss, batch_size, sample_size=1_000_000):
+    def __init__(self, win, loss, batch_size, sample_size: int = 1_000_000, sample_rate: int = 1):
+        sample_size = sample_size * sample_rate
         self.x_left = np.empty(shape=(sample_size, 773), dtype=bool)
         self.x_right = np.empty(shape=(sample_size, 773), dtype=bool)
         self.y = np.empty(shape=(sample_size, 2), dtype=int)
@@ -17,6 +18,7 @@ class DeepChessDataset(Sequence):
         self.loss = loss
         self.batch_size = batch_size
         self.sample_size = sample_size
+        self.with_replacement = True if sample_rate > 1 else False
         self.on_epoch_end()
 
     def __len__(self):
@@ -29,8 +31,9 @@ class DeepChessDataset(Sequence):
         return [x_left_batch, x_right_batch], y_batch
 
     def on_epoch_end(self):
-        win_sample = self.win.sample(self.sample_size, random_state=42)["bitboard"]
-        loss_sample = self.loss.sample(self.sample_size, random_state=42)["bitboard"]
+        """Generate a random set of position pairs for each epoch"""
+        win_sample = self.win.sample(self.sample_size, replace=self.with_replacement)["bitboard"]
+        loss_sample = self.loss.sample(self.sample_size, replace=self.with_replacement)["bitboard"]
         for i, (x_win, x_loss) in enumerate(zip(win_sample.values, loss_sample.values)):
             label = random.choice(((1, 0), (0, 1)))
             x_left, x_right = (x_win, x_loss) if label == (1, 0) else (x_loss, x_win)
@@ -43,9 +46,7 @@ class DeepChessDataset(Sequence):
 class Pos2VecDataset(Sequence):
     def __init__(self, win, loss, batch_size, sample_size=1_000_000):
         self.x = np.vstack(
-            pd.concat((win.sample(sample_size, random_state=42), loss.sample(sample_size, random_state=42)))[
-                "bitboard"
-            ].to_numpy()
+            pd.concat((win.sample(sample_size), loss.sample(sample_size)))["bitboard"].to_numpy()
         )
         self.batch_size = batch_size
 
@@ -57,20 +58,28 @@ class Pos2VecDataset(Sequence):
         return x_batch, x_batch
 
     def on_epoch_end(self):
+        """Shuffle the ordering of positions for each epoch"""
         np.random.shuffle(self.x)
 
 
-def deepchess_dataset():
+def deepchess_evaluation_dataset() -> Sequence:
+    win_val = pd.read_pickle(WIN_VAL_DATASET)
+    loss_val = pd.read_pickle(LOSS_VAL_DATASET)
+
+    return DeepChessDataset(win_val, loss_val, 16, 100_000, 10)
+
+
+def deepchess_dataset() -> (Sequence, Sequence):
     win = pd.read_pickle(WIN_DATASET)
     loss = pd.read_pickle(LOSS_DATASET)
 
     win_val = pd.read_pickle(WIN_VAL_DATASET)
     loss_val = pd.read_pickle(LOSS_VAL_DATASET)
 
-    return DeepChessDataset(win, loss, 16), DeepChessDataset(win_val, loss_val, 25, 1_000)
+    return DeepChessDataset(win, loss, 16), DeepChessDataset(win_val, loss_val, 16, 100_000)
 
 
-def pos2vec_dataset():
+def pos2vec_dataset() -> (Sequence, Sequence):
     win = pd.read_pickle(WIN_DATASET)
     loss = pd.read_pickle(LOSS_DATASET)
 
